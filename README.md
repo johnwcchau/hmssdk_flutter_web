@@ -3,39 +3,47 @@
 hmssdk_flutter web 3rd-party implementation
 
 ## How to use
+- Simply add this into `pubspec.yaml`
+  
+  ```yaml
+  dependencies:
+    hmssdk_flutter_web: ^0.0.1
+  ```
 
-1. Clone this repo and place it in some directory you like (`<<DIR_TO_PLUGIN>>`)
+- Or do it manually
 
-2. *Optional*: You may want to rebuild/update the javascript part using **(may break this plugin due to version difference)**
-```bash
-cd webpack
-npm install
-# # In case you had never used webpack
-# # see https://webpack.js.org/
-# npm install --global webpack
-# npm install --global webpack-cli
-webpack
-```
+  1. Clone this repo and place it in some directory you like (`<<DIR_TO_PLUGIN>>`)
 
-3. Then in your projects `pubspec.yaml`
+  2. *Optional*: You may want to rebuild/update the javascript part using **(may break this plugin due to version difference)**
+    ```bash
+    cd webpack
+    npm install
+    # # In case you had never used webpack
+    # # see https://webpack.js.org/
+    # npm install --global webpack
+    # npm install --global webpack-cli
+    webpack
+    ```
 
-```yaml
-dependencies:
-  hmssdk_flutter_web:
-    path: <<DIR_TO_PLUGIN>>
-```
+  3. Then in your projects `pubspec.yaml`
 
-4. Instead of using `HMSVideoView` from `package:hmssdk_flutter/hmssdk_flutter.dart`, use `HMSVideoView` from this package (my `HMSVideoView` simply adds javascript parts into original file so it will also work for Android/iOS.
-```dart
-import 'package:hmssdk_flutter_web/hmssdk_flutter_web.dart' as hmsweb;
+    ```yaml
+    dependencies:
+      hmssdk_flutter_web:
+        path: <<DIR_TO_PLUGIN>>
+    ```
 
-// and in your build function ...
-return hmsweb.HMSVideoView(
-    matchParent: true,
-    scaleType: ScaleType.SCALE_ASPECT_FIT,
-    track: track as HMSVideoTrack)
+**Note:** Instead of using `HMSVideoView` from `package:hmssdk_flutter/hmssdk_flutter.dart`, use `HMSVideoView` from this package (my `HMSVideoView` simply adds javascript parts into original file so it will also work for Android/iOS)
+  ```dart
+  import 'package:hmssdk_flutter_web/hmssdk_flutter_web.dart' as hmsweb;
 
-```
+  // and in your build function ...
+  return hmsweb.HMSVideoView(
+      matchParent: true,
+      scaleType: ScaleType.SCALE_ASPECT_FIT,
+      track: track as HMSVideoTrack)
+
+  ```
 
 ## How this works
 
