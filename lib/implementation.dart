@@ -51,8 +51,6 @@ class HmssdkFlutterWeb {
   }
 
   static void registerWith(Registrar registrar) {
-    importJsLibrary();
-
     final MethodChannel channel = MethodChannel(
       'hmssdk_flutter',
       const StandardMethodCodec(),
@@ -83,7 +81,7 @@ class HmssdkFlutterWeb {
       return videoViews[id]!;
     });
 
-    Future.delayed(const Duration(milliseconds: 100), () async {
+    importJsLibrary().then((value) {
       hmssdkjsSetNotificationsHandler(allowInterop(notificationHandler));
     });
   }

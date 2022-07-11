@@ -7,7 +7,7 @@ hmssdk_flutter web 3rd-party implementation
   
   ```yaml
   dependencies:
-    hmssdk_flutter_web: ^0.0.2
+    hmssdk_flutter_web: ^0.0.3
   ```
 
 - Or do it manually
