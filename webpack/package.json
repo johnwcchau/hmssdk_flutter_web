@@ -1,0 +1,11 @@
+{
+  "name": "webpack",
+  "version": "1.0.0",
+  "description": "webpack for hmssdk_flutter_web.js",
+  "main": "hmssdk.js",
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@100mslive/hms-video-store": "^0.3.4"
+  }
+}
