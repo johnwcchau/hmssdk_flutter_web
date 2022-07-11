@@ -1,6 +1,7 @@
 name: hmssdk_flutter_web
-description: A new flutter plugin project.
+description: My implementation of web part for hmssdk_flutter 3rd-party implementation
 version: 0.0.1
+repository: https://github.com/johnwcchau/hmssdk_flutter_web
 
 environment:
   sdk: ">=2.16.2 <3.0.0"
@@ -11,6 +12,7 @@ dependencies:
     sdk: flutter
   flutter_web_plugins:
     sdk: flutter
+  js: ^0.6.3
   hmssdk_flutter: ^0.7.3
 
 dev_dependencies:

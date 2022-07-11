@@ -6,14 +6,10 @@ import 'dart:convert';
 // ignore: avoid_web_libraries_in_flutter
 import 'dart:html' as html;
 import 'dart:ui' as ui;
-import 'dart:js';
 import 'dart:js_util';
 import 'package:flutter/services.dart';
 import 'package:flutter_web_plugins/flutter_web_plugins.dart';
 import 'package:js/js.dart';
-
-import 'hmssdk_flutter_web.dart';
-import 'import_js_library.dart';
 
 import 'plugin_event_channel.dart' as mypec;
 
@@ -42,10 +38,20 @@ class HmssdkFlutterWeb {
   static final _logsStreamController = StreamController();
   static final _rtcStreamController = StreamController();
 
+  static Future importJsLibrary() async {
+    const url =
+        './assets/packages/hmssdk_flutter_web/assets/hmssdk_flutter_web.js';
+    final script = html.ScriptElement()
+      ..type = 'text/javascript'
+      ..charset = 'utf-8'
+      ..async = true
+      ..src = url;
+    html.querySelector('head')!.children.add(script);
+    return script.onLoad.first;
+  }
+
   static void registerWith(Registrar registrar) {
-    importJsLibrary(
-        url: 'assets/hmssdk_flutter_web.js',
-        flutterPluginName: 'hmssdk_flutter_web');
+    importJsLibrary();
 
     final MethodChannel channel = MethodChannel(
       'hmssdk_flutter',
