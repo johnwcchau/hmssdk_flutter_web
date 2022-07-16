@@ -16,6 +16,7 @@ import { HMSReactiveStore,
         selectPeers,
         selectRoleChangeRequest,
         selectRolesMap,
+        selectHMSStats,
     } from '@100mslive/hms-video-store';
 window.HMSReactiveStore = HMSReactiveStore;
 
@@ -24,10 +25,119 @@ let hmsActions;
 let hmsStore;
 let notiHandler = null;
 let inPreview = false;
-let statsCounter = false;
+let statsTimer = null;
 let hmsNotifications;
 
+function statsIntervalCall() {
+    if (!notiHandler) return;
+    if (!hmsActions || !hmsActions.sdk) return;
+    const stats = hmsActions.sdk.getWebrtcInternals().hmsStats;
+    const peerStats = stats.peerStats;
+    const trackStats = stats.trackStats;
+    const localPeerId = stats.store.localPeerId;
+
+    let value = peerStats[localPeerId];
+    if (value) {
+        notiHandler(JSON.stringify({
+            type: "HMS_STAT",
+            event: "on_rtc_stats",
+            data: JSON.stringify({
+                bytes_sent: value.publish.bytesSent,
+                bytes_received: value.subscribe.bytesReceived,
+                bitrate_sent: value.publish.bitrate,
+                packets_received: value.subscribe.packetsReceived,
+                packets_lost: value.subscribe.packetsLost,
+                bitrate_received: value.subscribe.bitrate,
+                round_trip_time: value.publish.totalRoundTripTime,
+            }),
+        }));
+    }
+    // Object.keys(peerStats).forEach(k => {
+    //     const value = peerStats[k];
+    //     notiHandler(JSON.stringify({
+    //         type: "HMS_STAT",
+    //         event: "on_rtc_stats",
+            // data: JSON.stringify({
+            //     bytes_sent: value.publish.bytesSent,
+            //     bytes_received: value.subscribe.bytesReceived,
+            //     bitrate_sent: value.publish.bitrate,
+            //     packets_received: value.subscribe.packetsReceived,
+            //     packets_lost: value.subscribe.packetsLost,
+            //     bitrate_received: value.subscribe.bitrate,
+            //     round_trip_time: value.publish.totalRoundTripTime,
+            // }),
+    //     }));
+    // });
+    Object.keys(trackStats).forEach(k => {
+        const value = trackStats[k];
+        const isVideo = value.kind == "video";
+        const isLocal = value.peerId == localPeerId;
+        const peer = jsPeerToPeer(hmsActions.hmsSDKPeers[value.peerId]);
+        const track = jsTrackToTrack(hmsActions.hmsSDKTracks[k]);
+        if (!track || !peer) return;
+        let item = {
+            type: "HMS_STAT",
+            data: {
+                peer: peer,
+                track: track,
+            },
+        };
+        if (isLocal) {
+            if (isVideo) {
+                item.event = "on_local_video_stats";
+                item.data.local_video_stats = {
+                    bytes_received: value.bytesSent || 0,
+                    bitrate: value.bitrate || 0,
+                    round_trip_time: 0, //TODO fill in the blanks
+                    frame_rate: value.framesPerSecond || 0,
+                    resolution: {
+                        width: value.frameWidth || 0,
+                        height: value.frameHeight || 0
+                    }
+                };
+            } else {
+                item.event = "on_local_audio_stats";
+                item.data.local_audio_stats = {
+                    bytes_received: value.bytesSent || 0,
+                    bitrate: value.bitrate || 0,
+                    round_trip_time: 0, //TODO fill in the blanks
+                };
+            }
+        } else {
+            if (isVideo) {
+                item.event = "on_remote_video_stats";
+                item.data.remote_video_stats = {
+                    bytes_received: value.bytesReceived || 0,
+                    jitter: value.jitter || 0,
+                    bitrate: value.bitrate || 0,
+                    packets_lost: value.packetsLost || 0,
+                    packets_received: value.packetsReceived || 0,
+                    frame_rate: value.frameRate || 0,
+                    resolution: {
+                        width: value.frameWidth || 0,
+                        height: value.frameHeight || 0
+                    }
+                };
+            } else {
+                item.event = "on_remote_audio_stats";
+                item.data.remote_audio_stats = {
+                    bytes_received: value.bytesReceived || 0,
+                    jitter: value.jitter || 0,
+                    bitrate: value.bitrate || 0,
+                    packets_lost: value.packetsLost || 0,
+                    packets_received: value.packetsReceived || 0,
+                };
+            }
+        }
+        notiHandler(JSON.stringify(item));
+    });
+}
+
 function build() {
+    
+    if (statsTimer) clearInterval(statsTimer);
+    statsTimer = null;
+
     hms = new HMSReactiveStore();
     hms.triggerOnSubscribe();
     hmsActions = hms.getActions();
@@ -37,6 +147,7 @@ function build() {
     //statsCounter = false;
     
     hmsStore.subscribe(value => {
+        
         if (!notiHandler) return;
         if (value) {
             notiHandler(JSON.stringify({
@@ -82,62 +193,6 @@ function build() {
         }
     }, selectRoom);
 
-    // hmsStore.subscribe(value => {
-    //     if (!notiHandler) return;
-    //     if (!statsCounter) return;
-    //     notiHandler(JSON.stringify({
-    //         type: "HMS_STAT",
-    //         event: "on_rtc_stats",
-    //         data: JSON.stringify({
-    //             bytes_sent: value.publish.bytesSent || 0,
-    //             bytes_received: value.subscribe.bytesReceived || 0,
-    //             bitrate_sent: value.publish.bitrate || 0,
-    //             packets_received: 0, //TODO fill in the blanks
-    //             packets_lost: value.subscribe.packetsLost || 0,
-    //             bitrate_received: value.subscribe.bitrate || 0,
-    //             round_trip_time: value.publish.currentRoundTripTime || 0,
-    //         }),
-    //     }));
-    // }, selectHMSStats.localPeerStats);
-
-    // hmsStore.subscribe(value => {
-    //     if (!notiHandler) return;
-    //     if (!statsCounter) return;
-    //     notiHandler(JSON.stringify({
-    //         type: "HMS_STAT",
-    //         event: "on_local_audio_stats",
-    //         data: JSON.stringify({
-    //             peer: jsPeerToPeer(hmsActions.hmsSDKPeers[value.peerID]),
-    //             track: jsTrackToTrack(hmsActions.hmsSDKTracks[value.localId]),
-    //             local_audio_stats: {
-    //                 bytes_received: value.bytesSent,
-    //                 bitrate: value.bitrate,
-    //                 round_trip_time: value.roundTripTime,
-    //         }}),
-    //     }));
-    // }, selectHMSStats.localAudioTrackStats);
-    // hmsStore.subscribe(value => {
-    //     if (!notiHandler) return;
-    //     if (!statsCounter) return;
-    //     notiHandler(JSON.stringify({
-    //         type: "HMS_STAT",
-    //         event: "on_local_video_stats",
-    //         data: JSON.stringify({
-    //             peer: jsPeerToPeer(hmsActions.hmsSDKPeers[value.peerID]),
-    //             track: jsTrackToTrack(hmsActions.hmsSDKTracks[value.localId]),
-    //             local_video_stats: {
-    //                 bytes_received: value.bytesSent,
-    //                 bitrate: value.bitrate, //TODO fill in the blanks
-    //                 round_trip_time: value.roundTripTime,
-    //                 frame_rate: value.framesPerSecond,
-    //                 resolution: {
-    //                     width: value.frameWidth,
-    //                     height: value.frameHeight
-    //                 }
-    //         }}),
-    //     }));
-    // }, selectHMSStats.localVideoTrackStats);
-
     hmsNotifications.onNotification(noti => {
         switch (noti.type) {
             case "TRACK_ADDED":
@@ -147,8 +202,8 @@ function build() {
             case 'TRACK_DESCRIPTION_CHANGED':
             case 'TRACK_DEGRADED':
             case 'TRACK_RESTORED':
-                noti.peer = jsPeerToPeer(hmsStore.getState(selectPeerByID(noti.data.peerId)));
-                noti.data = jsTrackToTrack(noti.data);
+                noti.peer = jsPeerToPeer(hmsActions.hmsSDKPeers[noti.data.peerId]);
+                noti.data = jsTrackToTrack(hmsActions.hmsSDKTracks[noti.data.id]);
                 noti.update = {
                             "TRACK_ADDED": "trackAdded",
                             "TRACK_REMOVED": "trackRemoved",
@@ -165,7 +220,7 @@ function build() {
             case "NAME_UPDATED":
             case "METADATA_UPDATED":
             case "ROLE_UPDATED":
-                noti.data = jsPeerToPeer(noti.data);
+                noti.data = jsPeerToPeer(hmsActions.hmsSDKPeers[noti.data.id]);
                 noti.update = {
                             "PEER_JOINED": "peerJoined",
                             "PEER_LEFT": "peerLeft",
@@ -178,11 +233,12 @@ function build() {
             case "ROOM_ENDED":
             case "REMOVED_FROM_ROOM":
                 noti.data = jsRoomEndToRoomEnd(noti.data);
+                if (statsTimer) clearInterval(statsTimer);
                 break;
             case "NEW_MESSAGE":
                 noti.data = {
                     message: {
-                        sender: jsPeerToPeer(hmsStore.getState(selectPeerByID(noti.data.peerId))),
+                        sender: jsPeerToPeer(hmsActions.hmsSDKPeers[noti.data.peerId]),
                         hms_message_recipient: {
                             recipient_peer: noti.data.recipientPeer ? jsPeerToPeer(hmsStore.getState(selectPeerByID(noti.data.recipientPeer))) : null,
                             recipient_roles: noti.data.recipientRoles ? (() => {
@@ -260,23 +316,34 @@ function jsRoleToRole(params) {
         priority:params.priority,
     };
 }
+
+/**
+ * convert js-side peer to channel param
+ * @param {HMSPeer} params peer data from hmsActions.hmsSDKPeers
+ * @returns 
+ */
 function jsPeerToPeer(params) {
     if (!params) return null;
     return {
-        "peer_id":params.id,
+        "peer_id":params.peerId,
         "name":params.name,
         "is_local":params.isLocal,
-        "role":jsRoleToRole(hmsStore.getState(selectRoleByRoleName(params.roleName))),
+        "role":jsRoleToRole(params.role),
         "metadata":params.metadata,
         "customer_user_id":params.customerUserId,
         "network_quality":params.networkQuality,
     };
 }
 
+/**
+ * convert js-side track to channel param
+ * @param {HMSTrack} params track data from hmsActions.hmsSDKTracks
+ * @returns 
+ */
 function jsTrackToTrack(params) {
     if (!params) return null;
-    let audioSetting = params['type'] == 'audio' ? hmsActions.hmsSDKTracks[params['id']].settings: null;
-    let videoSetting = params['type'] == 'video' ? hmsActions.hmsSDKTracks[params['id']].settings: null;
+    let audioSetting = params.type == 'audio' ? params.settings: null;
+    let videoSetting = params.type == 'video' ? params.settings: null;
     if (audioSetting) {
         audioSetting = {
             bit_rate: audioSetting['maxBitrate'],
@@ -298,7 +365,7 @@ function jsTrackToTrack(params) {
     }
     return {
         instance_of: params['type'] == 'video',
-        track_id: params['id'],
+        track_id: params['publishedTrackId'] || params['sdpTrackId'],
         track_description: '',
         track_source: params['source'].toUpperCase(),
         track_kind: params["type"].toUpperCase(),
@@ -314,7 +381,7 @@ function jsRoomToRoom(params) {
     let peers = [];
     if (params['peers']) {
         params['peers'].forEach(e => {
-            peers.push(jsPeerToPeer(hmsStore.getState(selectPeerByID(e))));
+            peers.push(jsPeerToPeer(hmsActions.hmsSDKPeers[e]));
         });
     }
     let result = {
@@ -346,7 +413,7 @@ function jsRoomEndToRoomEnd(params) {
     if (!params) return null;
     return {
         removed_from_room: {
-            peer_who_removed: params.requestedBy ? jsPeerToPeer(hmsStore.getState(selectPeerByID(params.requestedBy))): null,
+            peer_who_removed: params.requestedBy ? (jsPeerToPeer(hmsActions.hmsSDKPeers[params.requestedBy])) : null,
             reason: params.reason,
             room_was_ended: params.roomEnded,
         }
@@ -419,18 +486,24 @@ window.hmssdkjsHandleMethodCall = async function (method, args) {
         // MARK: Room Actions
         case "get_room":
             return JSON.stringify(jsRoomToRoom(hmsStore.getState(selectRoom)));
-        case "get_local_peer":
-            return JSON.stringify(jsPeerToPeer(hmsStore.getState(selectLocalPeer)));
+        case "get_local_peer": {
+            const localPeerId = hmsActions.sdk.getWebrtcInternals().store.localPeerId;
+            return JSON.stringify((jsPeerToPeer(hmsActions.hmsSDKPeers[localPeerId])));
+        }
         case "get_remote_peers": {
+            const localPeerId = hmsActions.sdk.getWebrtcInternals().store.localPeerId;
             let peers = [];
-            hmsStore.getState(selectRemotePeers).forEach(e => {
+            Object.keys(hmsActions.hmsSDKPeers).forEach(k => {
+                if (k == localPeerId) return;
+                const e = hmsActions.hmsSDKPeers[k];
                 peers.push(jsPeerToPeer(e));
             });
             return JSON.stringify(peers);
         }
         case "get_peers": {
             let peers = [];
-            hmsStore.getState(selectPeers).forEach(e => {
+            Object.keys(hmsActions.hmsSDKPeers).forEach(k => {
+                const e = hmsActions.hmsSDKPeers[k];
                 peers.push(jsPeerToPeer(e));
             });
             return JSON.stringify(peers);
@@ -446,12 +519,6 @@ window.hmssdkjsHandleMethodCall = async function (method, args) {
             return hmsStore.getState(selectIsPeerAudioEnabled(peerId));
         }
         case 'mute_all': {
-            // const options = {
-            //     enabled: false, // false to mute, true to unmute
-            //     type: 'audio', // optional, audio/video, mutes both if not passed
-            //     source: 'regular' // optional, mutes all sources(regular, screen etc.) if not passed
-            // };
-            // await hmsActions.setRemoteTracksEnabled(options);
             Object.keys(hmsActions.hmsSDKTracks).forEach(e => {
                 const track = hmsActions.hmsSDKTracks[e];
                 if (track.type == 'audio') track.enabled = false;
@@ -459,11 +526,6 @@ window.hmssdkjsHandleMethodCall = async function (method, args) {
             return true;
         }
         case 'un_mute_all': {
-            // const options = {
-            //     enabled: true, // false to mute, true to unmute
-            //     type: 'audio', // optional, audio/video, mutes both if not passed
-            // };
-            // await hmsActions.setRemoteTracksEnabled(options);
             Object.keys(hmsActions.hmsSDKTracks).forEach(e => {
                 const track = hmsActions.hmsSDKTracks[e];
                 if (track.type == 'audio') track.enabled = true;
@@ -625,26 +687,27 @@ window.hmssdkjsHandleMethodCall = async function (method, args) {
             });
         }
         case "get_track_by_id": {
-            return JSON.stringify(jsTrackToTrack(hmsState.getState(selectTrackByID(args['track_id']))));
+            return JSON.stringify(jsTrackToTrack(hmsActions.hmsSDKTracks[args['track_id']]));
         }
         case "get_all_tracks": {
             const peerId = args['peer_id'];
             const peer = hmsState.getState(selectPeerByID(peerId));
             let tracks = [];
 
-            if (peer.videoTrack) tracks.push(jsTrackToTrack(hmsState.getState(selectTrackByID(peer.videoTrack))));
-            if (peer.audioTrack) tracks.push(jsTrackToTrack(hmsState.getState(selectTrackByID(peer.audioTrack))));
+            if (peer.videoTrack) tracks.push(jsTrackToTrack(hmsActions.hmsSDKTracks[peer.videoTrack]));
+            if (peer.audioTrack) tracks.push(jsTrackToTrack(hmsActions.hmsSDKTracks[peer.audioTrack]));
             for (let i = 0; i < peer.auxiliaryTracks.length; i++) {
-                tracks.push(jsTrackToTrack(hmsState.getState(selectTrackByID(peer.auxiliaryTracks[i]))));
+                tracks.push(jsTrackToTrack(hmsActions.hmsSDKTracks[peer.auxiliaryTracks[i]]));
             }
             return JSON.stringify(tracks);
         }
 
         case "start_stats_listener":
-            statsCounter = true;
+            if (statsTimer == null) statsTimer = setInterval(statsIntervalCall, 3000);
             return null;
         case "remove_stats_listener":
-            statsCounter = false;
+            if (statsTimer) clearInterval(statsTimer);
+            statsTimer = null;
             return null;
         default:
             alert(method);
