@@ -7,6 +7,7 @@ import 'dart:convert';
 import 'dart:html' as html;
 import 'dart:ui' as ui;
 import 'dart:js_util';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_web_plugins/flutter_web_plugins.dart';
 import 'package:js/js.dart';
@@ -14,7 +15,7 @@ import 'package:js/js.dart';
 import 'plugin_event_channel.dart' as mypec;
 
 Map<int, html.VideoElement> _videoViews = {};
-Map get videoViews => _videoViews;
+Map<int, html.VideoElement> get videoViews => _videoViews;
 
 @JS()
 external hmssdkjsHandleMethodCall(String method, dynamic arguments);
@@ -74,11 +75,12 @@ class HmssdkFlutterWeb {
         "rtc_event_channel", const StandardMethodCodec(), registrar)
       ..setController(_rtcStreamController);
     // ignore: undefined_prefixed_name
-    ui.platformViewRegistry.registerViewFactory('HMSVideoWebView', (id) {
-      if (videoViews[id] == null) {
-        videoViews[id] = html.VideoElement();
+    ui.platformViewRegistry.registerViewFactory('HMSVideoWebView',
+        (int viewId) {
+      if (videoViews[viewId] == null) {
+        videoViews[viewId] = html.VideoElement();
       }
-      return videoViews[id]!;
+      return videoViews[viewId]!;
     });
 
     importJsLibrary().then((value) {
@@ -87,7 +89,7 @@ class HmssdkFlutterWeb {
   }
 
   static void notificationHandler(String notiJson) {
-    print("Notified $notiJson");
+    if (kDebugMode) print("Notified $notiJson");
     final Map notification = jsonDecode(notiJson);
     final data = notification["data"];
     final bool inPreview = notification["inPreview"] ?? false;

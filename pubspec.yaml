@@ -1,10 +1,10 @@
 name: hmssdk_flutter_web
 description: My implementation of web part for hmssdk_flutter
-version: 0.0.4
+version: 0.0.5
 repository: https://github.com/johnwcchau/hmssdk_flutter_web
 
 environment:
-  sdk: ">=2.16.2 <3.0.0"
+  sdk: ">=2.18.2 <3.0.0"
   flutter: ">=2.5.0"
 
 dependencies:
@@ -13,12 +13,12 @@ dependencies:
   flutter_web_plugins:
     sdk: flutter
   js: ^0.6.3
-  hmssdk_flutter: ^0.7.3
+  hmssdk_flutter: 0.7.3
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^1.0.0
+  flutter_lints: ^2.0.1
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

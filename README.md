@@ -2,12 +2,14 @@
 
 hmssdk_flutter web 3rd-party implementation
 
+### Currently this version only works with hmssdk_flutter: 0.7.3
+
 ## How to use
 - Simply add this into `pubspec.yaml`
   
   ```yaml
   dependencies:
-    hmssdk_flutter_web: ^0.0.3
+    hmssdk_flutter_web: ^0.0.5
   ```
 
 - Or do it manually

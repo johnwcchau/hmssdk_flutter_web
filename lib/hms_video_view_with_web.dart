@@ -64,7 +64,9 @@ class HMSVideoViewState extends State<HMSVideoView> {
   @override
   Widget build(BuildContext context) {
     if (kIsWeb) {
-      return HtmlElementView(
+      final mirror =
+          widget.track.source != "REGULAR" ? false : widget.setMirror;
+      final view = HtmlElementView(
         viewType: 'HMSVideoWebView',
         onPlatformViewCreated: (id) {
           _id = id;
@@ -74,13 +76,15 @@ class HMSVideoViewState extends State<HMSVideoView> {
               jsonEncode({
                 "type": "attach",
                 "track": widget.track.trackId,
-                "setMirror":
-                    widget.track.source != "REGULAR" ? false : widget.setMirror,
+                // "setMirror":
+                //     widget.track.source != "REGULAR" ? false : widget.setMirror,
                 "matchParent": widget.matchParent,
                 "scaleType": widget.scaleType.name,
               }));
         },
       );
+      if (mirror) return Transform.scale(scaleX: -1, child: view);
+      return view;
     }
 
     ///AndroidView for android it uses surfaceRenderer provided internally by webrtc.

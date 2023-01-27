@@ -236,9 +236,11 @@ function build() {
                 if (statsTimer) clearInterval(statsTimer);
                 break;
             case "NEW_MESSAGE":
+                // console.log("NEW_MESSAGE");
+                // console.dir(noti, {depth:null});
                 noti.data = {
                     message: {
-                        sender: jsPeerToPeer(hmsActions.hmsSDKPeers[noti.data.peerId]),
+                        sender: jsPeerToPeer(hmsActions.hmsSDKPeers[noti.data.sender]),
                         hms_message_recipient: {
                             recipient_peer: noti.data.recipientPeer ? jsPeerToPeer(hmsStore.getState(selectPeerByID(noti.data.recipientPeer))) : null,
                             recipient_roles: noti.data.recipientRoles ? (() => {
@@ -429,6 +431,9 @@ window.hmssdkjsVideoView = function(video, argsJson) {
         video.autoplay = true;
         video.muted = true;
         video.playsinline = true;
+        if (args.setMirror) {
+            video.style.transform = 'scale(-1, 1)';
+        }
         hmsActions.attachVideo(args.track, video);
     } else {
         hmsActions.detachVideo(args.track, video);
